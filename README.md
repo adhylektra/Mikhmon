@@ -8,17 +8,6 @@
 
 ---
 
-## 📋 Table of Contents
-
-- [Tentang Proyek](#tentang-proyek)
-- [Screenshot](#screenshot)
-- [Fitur Utama](#fitur-utama)
-- [Arsitektur Sistem](#arsitektur-sistem)
-- [Instalasi](#instalasi)
-- [Teknologi yang Digunakan](#teknologi-yang-digunakan)
-- [Kontribusi](#kontribusi)
-- [Lisensi](#lisensi)
-- [Kontak](#kontak)
 
 ## 📸 Screenshot
 
@@ -209,4 +198,5 @@ Project Link: [https://github.com/alijayanet/mikhmon-agent](https://github.com/a
 
 <p align="center">
   Made with ❤️ by Ali Jaya Net
+
 </p>
