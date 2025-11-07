@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Integration - Start Here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.5s ease;
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .emoji {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+        }
+        .status {
+            display: inline-block;
+            background: #d4edda;
+            color: #155724;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .steps {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+        .steps h2 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .step-content h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .step-content p {
+            font-size: 14px;
+            color: #666;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .links {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 2px solid #e9ecef;
+        }
+        .links h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .link-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s;
+        }
+        .link-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        .link-icon {
+            font-size: 24px;
+            margin-right: 15px;
+        }
+        .alert {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .alert strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="emoji">📱</div>
+            <h1>WhatsApp Integration</h1>
+            <p>Sistem notifikasi voucher & bot WhatsApp untuk MikhMon</p>
+            <span class="status">✓ Terinstall</span>
+        </div>
+
+        <div class="alert">
+            <strong>⚠️ Penting!</strong>
+            Pastikan server MikhMon sudah berjalan di port 80
+        </div>
+
+        <div class="steps">
+            <h2>🚀 Mulai Setup (5 Menit)</h2>
+            
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Jalankan Installer</h3>
+                    <p>Klik tombol di bawah untuk check requirements</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Pilih Gateway WhatsApp</h3>
+                    <p>Fonnte.com (Rp 50rb) atau Wablas.com (Rp 75rb)</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Konfigurasi Settings</h3>
+                    <p>Input token & aktifkan notifikasi</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Test & Mulai Pakai</h3>
+                    <p>Kirim pesan test & setup webhook</p>
+                </div>
+            </div>
+        </div>
+
+        <a href="install_whatsapp.php" class="btn">
+            🔧 Jalankan Installer
+        </a>
+
+        <a href="settings/whatsapp_settings.php" class="btn">
+            ⚙️ Buka Settings
+        </a>
+
+        <a href="whatsapp_menu.html" class="btn btn-secondary">
+            📋 Menu Lengkap
+        </a>
+
+        <div class="links">
+            <h3>📚 Dokumentasi</h3>
+            
+            <a href="WHATSAPP_QUICKSTART.md" class="link-item" target="_blank">
+                <span class="link-icon">🚀</span>
+                <div>
+                    <strong>Quick Start Guide</strong>
+                    <p style="font-size: 12px; margin: 0;">Setup dalam 5 menit</p>
+                </div>
+            </a>
+
+            <a href="WHATSAPP_README.md" class="link-item" target="_blank">
+                <span class="link-icon">📖</span>
+                <div>
+                    <strong>Main Documentation</strong>
+                    <p style="font-size: 12px; margin: 0;">Dokumentasi lengkap</p>
+                </div>
+            </a>
+
+            <a href="WHATSAPP_INTEGRATION.md" class="link-item" target="_blank">
+                <span class="link-icon">📝</span>
+                <div>
+                    <strong>Full Integration Guide</strong>
+                    <p style="font-size: 12px; margin: 0;">Panduan integrasi detail</p>
+                </div>
+            </a>
+
+            <a href="config.example.whatsapp.php" class="link-item" target="_blank">
+                <span class="link-icon">⚙️</span>
+                <div>
+                    <strong>Config Example</strong>
+                    <p style="font-size: 12px; margin: 0;">Contoh konfigurasi</p>
+                </div>
+            </a>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e9ecef;">
+            <a href="admin.php?id=sessions" class="btn btn-secondary">
+                🏠 Kembali ke MikhMon Dashboard
+            </a>
+            <p style="margin-top: 20px; color: #999; font-size: 14px;">
+                WhatsApp Integration v1.0.0<br>
+                © 2024 - GPL v2 License
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Check if server is running
+        window.addEventListener('load', function() {
+            fetch('admin.php')
+                .then(response => {
+                    if (!response.ok) {
+                        document.querySelector('.alert').innerHTML = 
+                            '<strong>⚠️ Warning!</strong> Server MikhMon mungkin belum berjalan. Pastikan MikhmonServer.exe aktif.';
+                        document.querySelector('.alert').style.background = '#f8d7da';
+                        document.querySelector('.alert').style.borderColor = '#dc3545';
+                        document.querySelector('.alert').style.color = '#721c24';
+                    }
+                })
+                .catch(error => {
+                    console.log('Server check:', error);
+                });
+        });
+    </script>
+</body>
+</html>
