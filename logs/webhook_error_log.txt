@@ -1,0 +1,3 @@
+2025-11-04 03:08:45 | Phone: 6281947215703 | Command: BELI 3k | Error: Konfigurasi session tidak lengkap
+2025-11-04 03:13:05 | Phone: 6281947215703 | Command: BELI 3k | Error: Data session tidak ditemukan. Session: quick
+2025-11-04 03:14:07 | Phone: 6281947215703 | Command: BELI 3k | Error: Data session tidak ditemukan. Session: quick

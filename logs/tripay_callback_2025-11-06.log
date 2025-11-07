@@ -1,0 +1,15 @@
+2025-11-06 02:41:50 - Callback received
+POST: []
+GET: []
+Headers: {"Host":"localhost","Connection":"keep-alive","Content-Length":"336","X-Callback-Event":"payment_status","sec-ch-ua-platform":"\"Windows\"","X-Callback-Signature":"test-signature","User-Agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/142.0.0.0 Safari\/537.36 Edg\/142.0.0.0","sec-ch-ua":"\"Chromium\";v=\"142\", \"Microsoft Edge\";v=\"142\", \"Not_A Brand\";v=\"99\"","Content-Type":"application\/json","sec-ch-ua-mobile":"?0","Accept":"*\/*","Origin":"http:\/\/localhost","Sec-Fetch-Site":"same-origin","Sec-Fetch-Mode":"cors","Sec-Fetch-Dest":"empty","Referer":"http:\/\/localhost\/mikhmon-agent\/public\/test_callback.php","Accept-Encoding":"gzip, deflate, br, zstd","Accept-Language":"en,en-US;q=0.9,id;q=0.8,fi;q=0.7","Cookie":"lang=id; PHPSESSID=9hinvf6e8s1ku3ki345069vp0p"}
+---
+2025-11-06 02:43:54 - Callback received
+POST: []
+GET: []
+Headers: {"Host":"localhost","Connection":"keep-alive","Content-Length":"355","X-Callback-Event":"payment_status","sec-ch-ua-platform":"\"Windows\"","X-Callback-Signature":"4b98133102ac44c1071c94bd4314d9ea3813a917fdaf32dfc79409310aaeb552","User-Agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/142.0.0.0 Safari\/537.36 Edg\/142.0.0.0","sec-ch-ua":"\"Chromium\";v=\"142\", \"Microsoft Edge\";v=\"142\", \"Not_A Brand\";v=\"99\"","Content-Type":"application\/json","sec-ch-ua-mobile":"?0","Accept":"*\/*","Origin":"http:\/\/localhost","Sec-Fetch-Site":"same-origin","Sec-Fetch-Mode":"cors","Sec-Fetch-Dest":"empty","Referer":"http:\/\/localhost\/mikhmon-agent\/public\/test_callback.php","Accept-Encoding":"gzip, deflate, br, zstd","Accept-Language":"en,en-US;q=0.9,id;q=0.8,fi;q=0.7","Cookie":"lang=id; PHPSESSID=9hinvf6e8s1ku3ki345069vp0p"}
+---
+2025-11-06 02:45:28 - Callback received
+POST: []
+GET: []
+Headers: {"Host":"localhost","Connection":"keep-alive","Content-Length":"355","X-Callback-Event":"payment_status","sec-ch-ua-platform":"\"Windows\"","X-Callback-Signature":"64e3b6795b7971afe6254d84cec636d632bbf4104a47db596e4e827581ccd388","User-Agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/142.0.0.0 Safari\/537.36 Edg\/142.0.0.0","sec-ch-ua":"\"Chromium\";v=\"142\", \"Microsoft Edge\";v=\"142\", \"Not_A Brand\";v=\"99\"","Content-Type":"application\/json","sec-ch-ua-mobile":"?0","Accept":"*\/*","Origin":"http:\/\/localhost","Sec-Fetch-Site":"same-origin","Sec-Fetch-Mode":"cors","Sec-Fetch-Dest":"empty","Referer":"http:\/\/localhost\/mikhmon-agent\/public\/test_callback.php","Accept-Encoding":"gzip, deflate, br, zstd","Accept-Language":"en,en-US;q=0.9,id;q=0.8,fi;q=0.7","Cookie":"lang=id; PHPSESSID=9hinvf6e8s1ku3ki345069vp0p"}
+---
