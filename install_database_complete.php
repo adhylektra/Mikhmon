@@ -302,18 +302,18 @@ try {
     
     $tripayMethods = [
         // [gateway_name, method_code, method_name, method_type, name, type, display_name, icon, admin_fee_type, admin_fee_value, min_amount, max_amount, is_active, sort_order]
-        ['tripay', 'QRIS', 'QRIS (Semua Bank & E-Wallet)', 'qris', 'QRIS', 'qris', 'QRIS (Semua Bank & E-Wallet)', 'fa-qrcode', 'fixed', 0, 10000, 5000000, 1, 1],
-        ['tripay', 'BRIVA', 'BRI Virtual Account', 'va', 'BRIVA', 'va', 'BRI Virtual Account', 'fa-bank', 'fixed', 4000, 10000, 5000000, 1, 2],
-        ['tripay', 'BNIVA', 'BNI Virtual Account', 'va', 'BNIVA', 'va', 'BNI Virtual Account', 'fa-bank', 'fixed', 4000, 10000, 5000000, 1, 3],
-        ['tripay', 'BCAVA', 'BCA Virtual Account', 'va', 'BCAVA', 'va', 'BCA Virtual Account', 'fa-bank', 'fixed', 4000, 10000, 5000000, 1, 4],
-        ['tripay', 'MANDIRIVA', 'Mandiri Virtual Account', 'va', 'MANDIRIVA', 'va', 'Mandiri Virtual Account', 'fa-bank', 'fixed', 4000, 10000, 5000000, 1, 5],
-        ['tripay', 'PERMATAVA', 'Permata Virtual Account', 'va', 'PERMATAVA', 'va', 'Permata Virtual Account', 'fa-bank', 'fixed', 4000, 10000, 5000000, 1, 6],
-        ['tripay', 'OVO', 'OVO', 'ewallet', 'OVO', 'ewallet', 'OVO', 'fa-mobile', 'percentage', 2.5, 10000, 2000000, 1, 7],
-        ['tripay', 'DANA', 'DANA', 'ewallet', 'DANA', 'ewallet', 'DANA', 'fa-mobile', 'percentage', 2.5, 10000, 2000000, 1, 8],
-        ['tripay', 'SHOPEEPAY', 'ShopeePay', 'ewallet', 'SHOPEEPAY', 'ewallet', 'ShopeePay', 'fa-mobile', 'percentage', 2.5, 10000, 2000000, 1, 9],
-        ['tripay', 'LINKAJA', 'LinkAja', 'ewallet', 'LINKAJA', 'ewallet', 'LinkAja', 'fa-mobile', 'percentage', 2.5, 10000, 2000000, 1, 10],
-        ['tripay', 'ALFAMART', 'Alfamart', 'retail', 'ALFAMART', 'retail', 'Alfamart', 'fa-shopping-cart', 'fixed', 5000, 10000, 5000000, 1, 11],
-        ['tripay', 'INDOMARET', 'Indomaret', 'retail', 'INDOMARET', 'retail', 'Indomaret', 'fa-shopping-cart', 'fixed', 5000, 10000, 5000000, 1, 12]
+        ['tripay', 'QRIS', 'QRIS (Semua Bank & E-Wallet)', 'qris', 'QRIS', 'qris', 'QRIS (Semua Bank & E-Wallet)', 'fa-qrcode', 'fixed', 0, 1000, 5000000, 1, 1],
+        ['tripay', 'BRIVA', 'BRI Virtual Account', 'va', 'BRIVA', 'va', 'BRI Virtual Account', 'fa-bank', 'fixed', 4000, 1000, 5000000, 1, 2],
+        ['tripay', 'BNIVA', 'BNI Virtual Account', 'va', 'BNIVA', 'va', 'BNI Virtual Account', 'fa-bank', 'fixed', 4000, 1000, 5000000, 1, 3],
+        ['tripay', 'BCAVA', 'BCA Virtual Account', 'va', 'BCAVA', 'va', 'BCA Virtual Account', 'fa-bank', 'fixed', 4000, 1000, 5000000, 1, 4],
+        ['tripay', 'MANDIRIVA', 'Mandiri Virtual Account', 'va', 'MANDIRIVA', 'va', 'Mandiri Virtual Account', 'fa-bank', 'fixed', 4000, 1000, 5000000, 1, 5],
+        ['tripay', 'PERMATAVA', 'Permata Virtual Account', 'va', 'PERMATAVA', 'va', 'Permata Virtual Account', 'fa-bank', 'fixed', 4000, 1000, 5000000, 1, 6],
+        ['tripay', 'OVO', 'OVO', 'ewallet', 'OVO', 'ewallet', 'OVO', 'fa-mobile', 'percentage', 2.5, 1000, 2000000, 1, 7],
+        ['tripay', 'DANA', 'DANA', 'ewallet', 'DANA', 'ewallet', 'DANA', 'fa-mobile', 'percentage', 2.5, 1000, 2000000, 1, 8],
+        ['tripay', 'SHOPEEPAY', 'ShopeePay', 'ewallet', 'SHOPEEPAY', 'ewallet', 'ShopeePay', 'fa-mobile', 'percentage', 2.5, 1000, 2000000, 1, 9],
+        ['tripay', 'LINKAJA', 'LinkAja', 'ewallet', 'LINKAJA', 'ewallet', 'LinkAja', 'fa-mobile', 'percentage', 2.5, 1000, 2000000, 1, 10],
+        ['tripay', 'ALFAMART', 'Alfamart', 'retail', 'ALFAMART', 'retail', 'Alfamart', 'fa-shopping-cart', 'fixed', 5000, 1000, 5000000, 1, 11],
+        ['tripay', 'INDOMARET', 'Indomaret', 'retail', 'INDOMARET', 'retail', 'Indomaret', 'fa-shopping-cart', 'fixed', 5000, 1000, 5000000, 1, 12]
     ];
     
     $insertSQL = "INSERT INTO payment_methods 
@@ -333,7 +333,8 @@ try {
     if (file_exists('data_insert.php')) {
         logStep("📊 Loading existing data from data_insert.php...", 'info');
         
-        // Include and execute data_insert.php
+        // Include and execute data_insert.php (expects $pdo)
+        $pdo = $conn;
         ob_start();
         include('data_insert.php');
         $data_output = ob_get_clean();
