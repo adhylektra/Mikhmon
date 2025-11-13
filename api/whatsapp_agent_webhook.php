@@ -14,6 +14,9 @@ include('../include/db_config.php');
 include('../lib/Agent.class.php');
 include('../lib/VoucherGenerator.class.php');
 include('../lib/routeros_api.class.php');
+include('../lib/DigiflazzClient.class.php');
+include('../lib/BillingService.class.php');
+include('../lib/WhatsAppNotification.class.php');
 
 // Load message settings
 $messageSettings = loadMessageSettings();
@@ -49,6 +52,10 @@ switch ($gateway) {
         $phone = $data['phone'] ?? $data['sender'] ?? $data['from'] ?? '';
         $message = $data['message'] ?? '';
         break;
+}
+
+function formatRupiah($value) {
+    return 'Rp ' . number_format((int)$value, 0, ',', '.');
 }
 
 if (!empty($phone) && !empty($message)) {
@@ -122,11 +129,40 @@ function processAgentCommand($phone, $message) {
                 showAllPrices($phone);
             }
         }
+        // Cek Tagihan billing command
+        elseif (preg_match('/^(cek\s+tagihan|tagihan)\s+(.+)$/i', $message, $matches)) {
+            if ($agentData) {
+                $keyword = trim($matches[2]);
+                handleBillingCheckCommand($phone, $agentData, $keyword);
+            } else {
+                sendWhatsAppMessage($phone, formatMessage("❌ Perintah ini hanya untuk agent terdaftar."));
+            }
+        }
+        // Bayar tagihan billing command
+        elseif (preg_match('/^bayar\s+(.+)$/i', $message, $matches)) {
+            if ($agentData) {
+                $keyword = trim($matches[1]);
+                handleBillingPaymentCommand($phone, $agentData, $keyword);
+            } else {
+                sendWhatsAppMessage($phone, formatMessage("❌ Perintah ini hanya untuk agent terdaftar."));
+            }
+        }
         // TOPUP REQUEST command
         elseif (preg_match('/^topup\s+(\d+)$/i', $message, $matches)) {
             if ($agentData) {
                 $amount = intval($matches[1]);
                 requestTopup($phone, $agentData, $amount);
+            }
+        }
+        // PULSA command (Digiflazz purchase)
+        elseif (preg_match('/^pulsa\s+(\S+)\s+([0-9+\-]+)(?:\s+(.+))?$/i', $message, $matches)) {
+            if ($agentData) {
+                $sku = strtoupper(trim($matches[1]));
+                $customerNumberInput = trim($matches[2]);
+                $customerNameInput = isset($matches[3]) ? trim($matches[3]) : '';
+                processDigiflazzPurchaseCommand($phone, $agentData, $sku, $customerNumberInput, $customerNameInput);
+            } else {
+                sendWhatsAppMessage($phone, "❌ Perintah ini hanya untuk agent terdaftar.");
             }
         }
         // SALES REPORT command
@@ -465,6 +501,282 @@ function generateVoucherAdmin($phone, $profileName, $quantity) {
 }
 
 /**
+ * Handle billing check command
+ */
+function handleBillingCheckCommand($phone, $agentData, $keyword) {
+    $customers = findBillingCustomers($keyword);
+
+    if (empty($customers)) {
+        sendWhatsAppMessage($phone, formatMessage("❌ Pelanggan dengan data *{$keyword}* tidak ditemukan."));
+        return;
+    }
+
+    if (count($customers) > 1) {
+        $reply = "📋 *Ditemukan lebih dari satu pelanggan*\n\n";
+        foreach ($customers as $index => $customer) {
+            $reply .= ($index + 1) . ". " . ($customer['name'] ?? '-') . "\n";
+            if (!empty($customer['service_number'])) {
+                $reply .= "   • Service: `" . $customer['service_number'] . "`\n";
+            }
+            if (!empty($customer['phone'])) {
+                $reply .= "   • Telepon: " . $customer['phone'] . "\n";
+            }
+            if (!empty($customer['genieacs_pppoe_username'])) {
+                $reply .= "   • PPPoE: `" . $customer['genieacs_pppoe_username'] . "`\n";
+            }
+            $reply .= "\n";
+        }
+        $reply .= "Gunakan service number/PPPoE agar lebih spesifik.\n";
+        sendWhatsAppMessage($phone, formatMessage($reply));
+        return;
+    }
+
+    $customer = $customers[0];
+    $pdo = getDBConnection();
+
+    $stmt = $pdo->prepare("SELECT id, period, due_date, amount, status FROM billing_invoices WHERE customer_id = :cid AND status IN ('unpaid','overdue') ORDER BY due_date ASC, id ASC");
+    $stmt->execute([':cid' => $customer['id']]);
+    $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $reply  = "📄 *TAGIHAN BILLING*\n\n";
+    $reply .= "Nama     : *" . ($customer['name'] ?? '-') . "*\n";
+    $reply .= "Paket    : " . ($customer['profile_name'] ?? '-') . "\n";
+    if (!empty($customer['service_number'])) {
+        $reply .= "Service  : `" . $customer['service_number'] . "`\n";
+    }
+    if (!empty($customer['genieacs_pppoe_username'])) {
+        $reply .= "PPPoE    : `" . $customer['genieacs_pppoe_username'] . "`\n";
+    }
+    if (!empty($customer['phone'])) {
+        $reply .= "Telepon  : " . $customer['phone'] . "\n";
+    }
+    $reply .= "Status   : " . strtoupper($customer['status'] ?? 'unknown') . "\n\n";
+
+    if (empty($invoices)) {
+        $reply .= "✅ Tidak ada tagihan yang belum dibayar.\n";
+        $reply .= "\nKetik *BAYAR {keyword}* untuk memproses pembayaran jika ada tagihan baru.";
+        sendWhatsAppMessage($phone, formatMessage($reply));
+        return;
+    }
+
+    $totalDue = 0;
+    foreach ($invoices as $invoice) {
+        $totalDue += (float)$invoice['amount'];
+        $dueDate = !empty($invoice['due_date']) ? date('d M Y', strtotime($invoice['due_date'])) : '-';
+        $reply .= "• Periode  : " . ($invoice['period'] ?? '-') . "\n";
+        $reply .= "  Jatuh Tempo : {$dueDate}\n";
+        $reply .= "  Status      : " . strtoupper($invoice['status']) . "\n";
+        $reply .= "  Tagihan     : " . formatRupiah($invoice['amount']) . "\n\n";
+    }
+
+    $reply .= "Total Tagihan: *" . formatRupiah($totalDue) . "*\n";
+    $reply .= "\nKetik *BAYAR {$keyword}* untuk memproses pembayaran tagihan pertama.";
+
+    sendWhatsAppMessage($phone, formatMessage($reply));
+}
+
+/**
+ * Handle billing payment command
+ */
+function handleBillingPaymentCommand($phone, $agentData, $keyword) {
+    if ($agentData['status'] !== 'active') {
+        sendWhatsAppMessage($phone, formatMessage("❌ Akun agent Anda tidak aktif. Hubungi admin."));
+        return;
+    }
+
+    $customers = findBillingCustomers($keyword);
+
+    if (empty($customers)) {
+        sendWhatsAppMessage($phone, formatMessage("❌ Pelanggan dengan data *{$keyword}* tidak ditemukan."));
+        return;
+    }
+
+    if (count($customers) > 1) {
+        $reply = "📋 *Ditemukan lebih dari satu pelanggan*\n\n";
+        foreach ($customers as $index => $customer) {
+            $reply .= ($index + 1) . ". " . ($customer['name'] ?? '-') . "\n";
+            if (!empty($customer['service_number'])) {
+                $reply .= "   • Service: `" . $customer['service_number'] . "`\n";
+            }
+            if (!empty($customer['phone'])) {
+                $reply .= "   • Telepon: " . $customer['phone'] . "\n";
+            }
+            if (!empty($customer['genieacs_pppoe_username'])) {
+                $reply .= "   • PPPoE: `" . $customer['genieacs_pppoe_username'] . "`\n";
+            }
+            $reply .= "\n";
+        }
+        $reply .= "Gunakan service number/PPPoE agar lebih spesifik sebelum bayar.";
+        sendWhatsAppMessage($phone, formatMessage($reply));
+        return;
+    }
+
+    $customer = $customers[0];
+    $pdo = getDBConnection();
+    $invoiceStmt = $pdo->prepare("SELECT * FROM billing_invoices WHERE customer_id = :cid AND status IN ('unpaid','overdue') ORDER BY due_date ASC, id ASC LIMIT 1");
+    $invoiceStmt->execute([':cid' => $customer['id']]);
+    $invoice = $invoiceStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$invoice) {
+        sendWhatsAppMessage($phone, formatMessage("✅ Tidak ada tagihan yang perlu dibayar untuk pelanggan ini."));
+        return;
+    }
+
+    $billingService = new BillingService();
+    $agent = new Agent();
+    $agentLatest = $agent->getAgentById($agentData['id']);
+    $agentSettings = $agent->getAgentSettings($agentData['id']);
+
+    $invoiceAmount = (float)$invoice['amount'];
+    $commissionAmount = isset($agentLatest['commission_amount']) ? max(0.0, (float)$agentLatest['commission_amount']) : 0.0;
+    $discountAmount = min($commissionAmount, $invoiceAmount);
+    $feeEnabled = $agentSettings['billing_payment_fee_enabled'] ?? '0';
+    $feePercent = (float)($agentSettings['billing_payment_fee_percent'] ?? 0);
+
+    $fee = 0.0;
+    if ($discountAmount > 0) {
+        $fee = -$discountAmount;
+    } elseif ($feeEnabled === '1' && $feePercent > 0) {
+        $fee = ($invoiceAmount * $feePercent / 100);
+    }
+
+    try {
+        $paymentResult = $billingService->payInvoiceWithAgentBalance($agentLatest['id'], (int)$invoice['id'], $fee);
+    } catch (Exception $e) {
+        sendWhatsAppMessage($phone, formatMessage("❌ Pembayaran gagal: " . $e->getMessage()));
+        return;
+    }
+
+    if (!$paymentResult['success']) {
+        $errorMessage = $paymentResult['message'] ?? 'Pembayaran gagal diproses.';
+        sendWhatsAppMessage($phone, formatMessage("❌ Pembayaran gagal: {$errorMessage}"));
+        return;
+    }
+
+    $paidInvoice = $billingService->getInvoiceById((int)$invoice['id']);
+    $dueDateFormatted = !empty($paidInvoice['due_date']) ? date('d M Y', strtotime($paidInvoice['due_date'])) : '-';
+    $paidAt = !empty($paidInvoice['paid_at']) ? date('d M Y H:i', strtotime($paidInvoice['paid_at'])) : date('d M Y H:i');
+    $profileName = '-';
+    if (!empty($paidInvoice['profile_snapshot'])) {
+        $snapshot = json_decode($paidInvoice['profile_snapshot'], true);
+        if (is_array($snapshot) && !empty($snapshot['profile_name'])) {
+            $profileName = $snapshot['profile_name'];
+        }
+    }
+    if ($profileName === '-' && isset($customer['profile_name']) && $customer['profile_name']) {
+        $profileName = $customer['profile_name'];
+    }
+
+    $amountFormatted = number_format($invoiceAmount, 0, ',', '.');
+    $deductedTotal = $invoiceAmount + $fee;
+    $totalFormatted = number_format($deductedTotal, 0, ',', '.');
+    $discountFormatted = $discountAmount > 0 ? number_format($discountAmount, 0, ',', '.') : null;
+    $balanceAfterFormatted = number_format($paymentResult['balance_after'], 0, ',', '.');
+
+    $reply  = "✅ *PEMBAYARAN BERHASIL*\n\n";
+    $reply .= "Pelanggan : *" . ($customer['name'] ?? '-') . "*\n";
+    $reply .= "Paket     : {$profileName}\n";
+    $reply .= "Periode   : " . ($paidInvoice['period'] ?? '-') . "\n";
+    $reply .= "Tagihan   : Rp {$amountFormatted}\n";
+    if ($discountFormatted) {
+        $reply .= "Komisi    : Rp {$discountFormatted}\n";
+    }
+    if ($fee > 0) {
+        $reply .= "Biaya     : Rp " . number_format($fee, 0, ',', '.') . "\n";
+    }
+    $reply .= "Saldo Dipotong : *Rp {$totalFormatted}*\n";
+    $reply .= "Saldo Sisa     : Rp {$balanceAfterFormatted}\n";
+    $reply .= "Jatuh Tempo    : {$dueDateFormatted}\n";
+    $reply .= "Tanggal Bayar  : {$paidAt}\n";
+    $reply .= "\nStruk telah dikirim ke pelanggan.";
+
+    sendWhatsAppMessage($phone, formatMessage($reply));
+
+    if (!empty($customer['phone'])) {
+        $notification = new WhatsAppNotification();
+        $payload = [
+            'invoice_id' => (int)$paidInvoice['id'],
+            'customer_name' => $customer['name'] ?? '-',
+            'package_name' => $profileName,
+            'period' => $paidInvoice['period'] ?? '-',
+            'due_date' => $dueDateFormatted,
+            'status' => $paidInvoice['status'] ?? 'paid',
+            'amount' => $invoiceAmount,
+            'amount_formatted' => $amountFormatted,
+            'total_paid_formatted' => $totalFormatted,
+            'balance_after_formatted' => $balanceAfterFormatted,
+            'agent_name' => $agentLatest['agent_name'] ?? '-',
+            'service_number' => $customer['service_number'] ?? '-',
+            'pppoe_username' => $customer['genieacs_pppoe_username'] ?? '-',
+            'paid_at' => $paidAt,
+        ];
+        $notification->notifyInvoicePaidByAgent($customer['phone'], $payload);
+    }
+}
+
+/**
+ * Find billing customers by keyword
+ */
+function findBillingCustomers($keyword, $limit = 5) {
+    $keyword = trim($keyword);
+    if ($keyword === '') {
+        return [];
+    }
+
+    $pdo = getDBConnection();
+    $results = [];
+    $added = [];
+
+    // Exact match by service number, PPPoE username, or phone
+    $stmt = $pdo->prepare("SELECT bc.*, bp.profile_name FROM billing_customers bc LEFT JOIN billing_profiles bp ON bc.profile_id = bp.id WHERE bc.service_number = :kw OR bc.genieacs_pppoe_username = :kw OR bc.phone = :kw LIMIT :limit");
+    $stmt->bindValue(':kw', $keyword);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        if (!isset($added[$row['id']])) {
+            $results[] = $row;
+            $added[$row['id']] = true;
+        }
+    }
+
+    // Match numeric phone stripped
+    $digits = preg_replace('/\D+/', '', $keyword);
+    if ($digits !== '' && count($results) < $limit) {
+        $stmt = $pdo->prepare("SELECT bc.*, bp.profile_name FROM billing_customers bc LEFT JOIN billing_profiles bp ON bc.profile_id = bp.id WHERE REPLACE(REPLACE(REPLACE(REPLACE(bc.phone, ' ', ''), '-', ''), '+', ''), '.', '') = :digits LIMIT :limit");
+        $stmt->bindValue(':digits', $digits);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            if (!isset($added[$row['id']])) {
+                $results[] = $row;
+                $added[$row['id']] = true;
+                if (count($results) >= $limit) {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (count($results) < $limit) {
+        $stmt = $pdo->prepare("SELECT bc.*, bp.profile_name FROM billing_customers bc LEFT JOIN billing_profiles bp ON bc.profile_id = bp.id WHERE bc.name LIKE :name ORDER BY bc.name ASC LIMIT :limit");
+        $stmt->bindValue(':name', '%' . $keyword . '%');
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            if (!isset($added[$row['id']])) {
+                $results[] = $row;
+                $added[$row['id']] = true;
+                if (count($results) >= $limit) {
+                    break;
+                }
+            }
+        }
+    }
+
+    return array_slice($results, 0, $limit);
+}
+
+/**
  * Check agent balance
  */
 function checkBalance($phone, $agentData) {
@@ -639,6 +951,14 @@ function sendAgentHelp($phone) {
     $reply .= "Request topup saldo\n";
     $reply .= "Contoh: TOPUP 100000\n\n";
     
+    $reply .= "📄 *CEK TAGIHAN <NAMA/NOMOR>*\n";
+    $reply .= "Lihat tagihan billing pelanggan\n";
+    $reply .= "Contoh: CEK TAGIHAN 08123xxxx\n\n";
+    
+    $reply .= "✅ *BAYAR <NAMA/NOMOR>*\n";
+    $reply .= "Bayar tagihan billing pelanggan\n";
+    $reply .= "Contoh: BAYAR BUDI\n\n";
+    
     $reply .= "📊 *LAPORAN <PERIOD>*\n";
     $reply .= "Lihat laporan penjualan\n";
     $reply .= "Period: TODAY, WEEK, MONTH\n";
@@ -756,6 +1076,211 @@ function requestTopup($phone, $agentData, $amount) {
     include_once('../lib/WhatsAppNotification.class.php');
     $notification = new WhatsAppNotification();
     $notification->notifyTopupRequest($agentData['id'], $amount);
+}
+
+/**
+ * Process Digiflazz purchase command
+ */
+function processDigiflazzPurchaseCommand($phone, $agentData, $sku, $customerNumberInput, $customerNameInput = '') {
+    $agent = new Agent();
+
+    if ($agentData['status'] !== 'active') {
+        sendWhatsAppMessage($phone, "❌ Akun agent Anda tidak aktif. Hubungi admin untuk mengaktifkan kembali.");
+        return;
+    }
+
+    $customerNo = preg_replace('/\D+/', '', $customerNumberInput);
+    if (strlen($customerNo) < 5) {
+        sendWhatsAppMessage($phone, "❌ Nomor tujuan tidak valid. Pastikan hanya berisi angka dan minimal 5 digit.");
+        return;
+    }
+
+    try {
+        $digiflazzClient = new DigiflazzClient();
+        if (!$digiflazzClient->isEnabled()) {
+            sendWhatsAppMessage($phone, "❌ Integrasi Digiflazz belum dikonfigurasi. Hubungi administrator.");
+            return;
+        }
+        $digiflazzSettings = $digiflazzClient->getSettings();
+        $defaultMarkupNominal = isset($digiflazzSettings['default_markup_nominal']) ? (int)$digiflazzSettings['default_markup_nominal'] : 0;
+    } catch (Exception $e) {
+        sendWhatsAppMessage($phone, "❌ Gagal menginisialisasi Digiflazz: " . $e->getMessage());
+        return;
+    }
+
+    $pdo = getDBConnection();
+    $stmt = $pdo->prepare('SELECT * FROM digiflazz_products WHERE buyer_sku_code = :sku AND status = "active" LIMIT 1');
+    $stmt->execute([':sku' => $sku]);
+    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$product) {
+        $stmt = $pdo->prepare('SELECT * FROM digiflazz_products WHERE UPPER(product_name) = :name AND status = "active" LIMIT 1');
+        $stmt->execute([':name' => strtoupper($sku)]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    if (!$product) {
+        $reply = "❌ Produk dengan SKU *{$sku}* tidak ditemukan atau tidak aktif.\n";
+        $reply .= "Gunakan perintah: *PULSA <SKU> <NO_HP> [Nama]*\n";
+        $reply .= "Cek katalog di menu Digital Products untuk melihat SKU yang tersedia.";
+        sendWhatsAppMessage($phone, $reply);
+        return;
+    }
+
+    $costPrice = (int)$product['price'];
+    if ($costPrice <= 0 && isset($product['buyer_price'])) {
+        $costPrice = (int)$product['buyer_price'];
+    }
+
+    if ($costPrice <= 0) {
+        sendWhatsAppMessage($phone, "❌ Harga produk tidak valid untuk SKU {$sku}. Coba produk lain atau hubungi admin.");
+        return;
+    }
+
+    $sellPrice = (int)($product['seller_price'] ?? 0);
+    if ($sellPrice <= 0) {
+        $sellPrice = $costPrice;
+        if (!empty($defaultMarkupNominal) && $defaultMarkupNominal > 0) {
+            $sellPrice += $defaultMarkupNominal;
+        }
+    }
+
+    if ($sellPrice < $costPrice) {
+        $sellPrice = $costPrice;
+    }
+
+    $agentLatest = $agent->getAgentById($agentData['id']);
+    if (!$agentLatest || $agentLatest['status'] !== 'active') {
+        sendWhatsAppMessage($phone, "❌ Akun agent tidak ditemukan atau tidak aktif.");
+        return;
+    }
+
+    if ($agentLatest['balance'] < $sellPrice) {
+        $reply = "❌ *SALDO TIDAK CUKUP*\n\n";
+        $reply .= "Saldo Anda: " . formatRupiah($agentLatest['balance']) . "\n";
+        $reply .= "Harga Produk: " . formatRupiah($sellPrice) . "\n";
+        $reply .= "Kurang: " . formatRupiah($sellPrice - $agentLatest['balance']) . "\n\n";
+        $reply .= "Silakan topup saldo terlebih dahulu.";
+        sendWhatsAppMessage($phone, $reply);
+        return;
+    }
+
+    $refId = $digiflazzClient->generateRefId('WA' . $agentLatest['agent_code']);
+
+    $orderPayload = [
+        'buyer_sku_code' => $product['buyer_sku_code'],
+        'customer_no' => $customerNo,
+        'ref_id' => $refId,
+    ];
+
+    $customerName = trim($customerNameInput);
+    if ($customerName !== '') {
+        $orderPayload['customer_name'] = $customerName;
+    }
+
+    try {
+        $digiflazzResponse = $digiflazzClient->createTransaction($orderPayload);
+    } catch (Exception $e) {
+        sendWhatsAppMessage($phone, "❌ Transaksi Digiflazz gagal: " . $e->getMessage());
+        return;
+    }
+
+    $deductResult = $agent->deductBalance(
+        $agentLatest['id'],
+        $sellPrice,
+        $product['product_name'],
+        $digiflazzResponse['ref_id'] ?? $refId,
+        'Digiflazz order via WhatsApp',
+        'digiflazz'
+    );
+
+    if (!$deductResult['success']) {
+        sendWhatsAppMessage($phone, "❌ Gagal memotong saldo: " . $deductResult['message']);
+        return;
+    }
+
+    try {
+        $transactionStmt = $pdo->prepare('INSERT INTO digiflazz_transactions (
+            agent_id, ref_id, buyer_sku_code, customer_no, customer_name, status, message, price, sell_price, serial_number, response
+        ) VALUES (
+            :agent_id, :ref_id, :sku, :customer_no, :customer_name, :status, :message, :price, :sell_price, :serial, :response
+        )');
+
+        $transactionStmt->execute([
+            ':agent_id' => $agentLatest['id'],
+            ':ref_id' => $digiflazzResponse['ref_id'] ?? $refId,
+            ':sku' => $product['buyer_sku_code'],
+            ':customer_no' => $customerNo,
+            ':customer_name' => $customerName,
+            ':status' => strtolower($digiflazzResponse['status'] ?? 'pending'),
+            ':message' => $digiflazzResponse['message'] ?? '',
+            ':price' => $costPrice,
+            ':sell_price' => $sellPrice,
+            ':serial' => $digiflazzResponse['sn'] ?? '',
+            ':response' => json_encode($digiflazzResponse)
+        ]);
+
+        if (!empty($digiflazzResponse['sn'])) {
+            $voucherStmt = $pdo->prepare('INSERT INTO agent_vouchers (
+                agent_id, transaction_id, username, password, profile_name, buy_price, sell_price, status, customer_phone, customer_name, sent_via
+            ) VALUES (
+                :agent_id, :transaction_id, :username, :password, :profile_name, :buy_price, :sell_price, :status, :customer_phone, :customer_name, :sent_via
+            )');
+            $voucherStmt->execute([
+                ':agent_id' => $agentLatest['id'],
+                ':transaction_id' => $deductResult['transaction_id'],
+                ':username' => $digiflazzResponse['sn'],
+                ':password' => $digiflazzResponse['sn'],
+                ':profile_name' => $product['product_name'],
+                ':buy_price' => $costPrice,
+                ':sell_price' => $sellPrice,
+                ':status' => 'active',
+                ':customer_phone' => $customerNo,
+                ':customer_name' => $customerName,
+                ':sent_via' => 'whatsapp'
+            ]);
+        }
+    } catch (Exception $dbException) {
+        $agent->topupBalance(
+            $agentLatest['id'],
+            $costPrice,
+            'Refund Digiflazz order failure (WhatsApp): ' . $product['product_name'],
+            'system'
+        );
+        sendWhatsAppMessage($phone, "❌ Gagal menyimpan data transaksi. " . $dbException->getMessage());
+        return;
+    }
+
+    $updatedAgent = $agent->getAgentById($agentLatest['id']);
+
+    $notification = new WhatsAppNotification();
+    $notified = $notification->notifyDigiflazzSuccess($agentLatest['id'], [
+        'product_name' => $product['product_name'],
+        'customer_no' => $customerNo,
+        'customer_name' => $customerName,
+        'status' => $digiflazzResponse['status'] ?? 'pending',
+        'message' => $digiflazzResponse['message'] ?? '',
+        'ref_id' => $digiflazzResponse['ref_id'] ?? $refId,
+        'serial_number' => $digiflazzResponse['sn'] ?? '',
+        'price' => $sellPrice
+    ], $updatedAgent['balance']);
+
+    if (!$notified) {
+        $content  = "⚡ *TRANSAKSI DIGIFLAZZ*\n\n";
+        $content .= "Produk : *{$product['product_name']}*\n";
+        $content .= "Nomor  : `{$customerNo}`\n";
+        if (!empty($customerName)) {
+            $content .= "Nama   : {$customerName}\n";
+        }
+        $content .= "Status : *" . strtoupper($digiflazzResponse['status'] ?? 'PENDING') . "*\n";
+        $content .= "Ref ID : {$digiflazzResponse['ref_id'] ?? $refId}\n";
+        $content .= "Biaya  : " . formatRupiah($sellPrice) . "\n";
+        if (!empty($digiflazzResponse['sn'])) {
+            $content .= "SN     : `{$digiflazzResponse['sn']}`\n";
+        }
+        $content .= "\nSaldo tersisa: " . formatRupiah($updatedAgent['balance']);
+        sendWhatsAppMessage($phone, formatMessage($content));
+    }
 }
 
 /**
