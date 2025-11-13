@@ -465,6 +465,114 @@ elseif ($removeexpiredhotspotuser != "") {
       echo "</div>";
     }
   }
+  elseif ($hotspot == "billing-dashboard") {
+    $path = './agent-admin/billing_dashboard.php';
+    if (file_exists($path)) {
+      try {
+        include_once($path);
+      } catch (Exception $e) {
+        echo "<div style='padding:20px;background:#fee;color:#c33;border-radius:10px;margin:20px;'>";
+        echo "<h3>Error Loading Billing Dashboard</h3>";
+        echo "<p>" . $e->getMessage() . "</p>";
+        echo "</div>";
+      }
+    } else {
+      echo "<div style='padding:20px;background:#fef3c7;color:#92400e;border-radius:10px;margin:20px;'>";
+      echo "<h3>Billing Dashboard belum tersedia</h3>";
+      echo "<p>File <code>agent-admin/billing_dashboard.php</code> tidak ditemukan.</p>";
+      echo "</div>";
+    }
+  }
+  elseif ($hotspot == "billing-profiles") {
+    $path = './agent-admin/billing_profiles.php';
+    if (file_exists($path)) {
+      try {
+        include_once($path);
+      } catch (Exception $e) {
+        echo "<div style='padding:20px;background:#fee;color:#c33;border-radius:10px;margin:20px;'>";
+        echo "<h3>Error Loading Billing Profiles</h3>";
+        echo "<p>" . $e->getMessage() . "</p>";
+        echo "</div>";
+      }
+    } else {
+      echo "<div style='padding:20px;background:#fef3c7;color:#92400e;border-radius:10px;margin:20px;'>";
+      echo "<h3>Billing Profiles belum tersedia</h3>";
+      echo "<p>File <code>agent-admin/billing_profiles.php</code> tidak ditemukan.</p>";
+      echo "</div>";
+    }
+  }
+  elseif ($hotspot == "billing-customers") {
+    $path = './agent-admin/billing_customers.php';
+    if (file_exists($path)) {
+      try {
+        include_once($path);
+      } catch (Exception $e) {
+        echo "<div style='padding:20px;background:#fee;color:#c33;border-radius:10px;margin:20px;'>";
+        echo "<h3>Error Loading Billing Customers</h3>";
+        echo "<p>" . $e->getMessage() . "</p>";
+        echo "</div>";
+      }
+    } else {
+      echo "<div style='padding:20px;background:#fef3c7;color:#92400e;border-radius:10px;margin:20px;'>";
+      echo "<h3>Billing Customers belum tersedia</h3>";
+      echo "<p>File <code>agent-admin/billing_customers.php</code> tidak ditemukan.</p>";
+      echo "</div>";
+    }
+  }
+  elseif ($hotspot == "billing-invoices") {
+    $path = './agent-admin/billing_invoices.php';
+    if (file_exists($path)) {
+      try {
+        include_once($path);
+      } catch (Exception $e) {
+        echo "<div style='padding:20px;background:#fee;color:#c33;border-radius:10px;margin:20px;'>";
+        echo "<h3>Error Loading Billing Invoices</h3>";
+        echo "<p>" . $e->getMessage() . "</p>";
+        echo "</div>";
+      }
+    } else {
+      echo "<div style='padding:20px;background:#fef3c7;color:#92400e;border-radius:10px;margin:20px;'>";
+      echo "<h3>Billing Invoices belum tersedia</h3>";
+      echo "<p>File <code>agent-admin/billing_invoices.php</code> tidak ditemukan.</p>";
+      echo "</div>";
+    }
+  }
+  elseif ($hotspot == "billing-settings") {
+    $path = './agent-admin/billing_settings.php';
+    if (file_exists($path)) {
+      try {
+        include_once($path);
+      } catch (Exception $e) {
+        echo "<div style='padding:20px;background:#fee;color:#c33;border-radius:10px;margin:20px;'>";
+        echo "<h3>Error Loading Billing Settings</h3>";
+        echo "<p>" . $e->getMessage() . "</p>";
+        echo "</div>";
+      }
+    } else {
+      echo "<div style='padding:20px;background:#fef3c7;color:#92400e;border-radius:10px;margin:20px;'>";
+      echo "<h3>Billing Settings belum tersedia</h3>";
+      echo "<p>File <code>agent-admin/billing_settings.php</code> tidak ditemukan.</p>";
+      echo "</div>";
+    }
+  }
+  elseif ($hotspot == "billing-portal") {
+    $path = './agent-admin/billing_portal.php';
+    if (file_exists($path)) {
+      try {
+        include_once($path);
+      } catch (Exception $e) {
+        echo "<div style='padding:20px;background:#fee;color:#c33;border-radius:10px;margin:20px;'>";
+        echo "<h3>Error Loading Billing Portal</h3>";
+        echo "<p>" . $e->getMessage() . "</p>";
+        echo "</div>";
+      }
+    } else {
+      echo "<div style='padding:20px;background:#fef3c7;color:#92400e;border-radius:10px;margin:20px;'>";
+      echo "<h3>Billing Portal belum tersedia</h3>";
+      echo "<p>File <code>agent-admin/billing_portal.php</code> tidak ditemukan.</p>";
+      echo "</div>";
+    }
+  }
   elseif ($hotspot == "whatsapp-agent-settings") {
     try {
       include_once('./agent-admin/whatsapp_agent_settings.php');
@@ -499,8 +607,26 @@ elseif ($removeexpiredhotspotuser != "") {
       echo "</div>";
     }
   }
-  
-  // Public Sales - Payment Methods
+  elseif ($hotspot == "digiflazz-transactions") {
+    try {
+      include_once('./agent-admin/digiflazz_transactions.php');
+    } catch (Exception $e) {
+      echo "<div style='padding:20px;background:#fee;color:#c33;border-radius:10px;margin:20px;'>";
+      echo "<h3>Error Loading Digiflazz Transactions</h3>";
+      echo "<p>" . $e->getMessage() . "</p>";
+      echo "</div>";
+    }
+  }
+  elseif ($hotspot == "digiflazz-settings") {
+    try {
+      include_once('./agent-admin/digiflazz_settings.php');
+    } catch (Exception $e) {
+      echo "<div style='padding:20px;background:#fee;color:#c33;border-radius:10px;margin:20px;'>";
+      echo "<h3>Error Loading Digiflazz Settings</h3>";
+      echo "<p>" . $e->getMessage() . "</p>";
+      echo "</div>";
+    }
+  }
   elseif ($hotspot == "payment-methods") {
     try {
       include_once('./agent-admin/payment_methods.php');
