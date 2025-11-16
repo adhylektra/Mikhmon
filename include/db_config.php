@@ -10,7 +10,7 @@
 define('DB_HOST', 'localhost'); // atau IP hosting
 define('DB_USER', 'root'); // <-- GANTI dengan username database hosting
 define('DB_PASS', ''); // <-- GANTI dengan password database hosting
-define('DB_NAME', 'mikhmon-main'); // <-- GANTI dengan nama database di hosting
+define('DB_NAME', 'mikhmon_billing'); // <-- GANTI dengan nama database di hosting
 define('DB_CHARSET', 'utf8mb4');
 
 // Create database connection
