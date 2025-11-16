@@ -126,10 +126,9 @@ try {
     $wasNotified = (int)($transaction['whatsapp_notified'] ?? 0);
     $successStatuses = ['success', 'sukses', 'berhasil', 'done', 'ok', 'selesai'];
 
-    // Check if we should send notification (only if not already notified and status is success)
     if ($transaction['agent_id'] && $wasNotified === 0 && in_array($normalizedStatus, $successStatuses, true)) {
         $productName = $transaction['buyer_sku_code'] ?? '-';
-        
+
         try {
             $productStmt = $db->prepare('SELECT product_name FROM digiflazz_products WHERE buyer_sku_code = :sku LIMIT 1');
             $productStmt->execute([':sku' => $transaction['buyer_sku_code']]);
@@ -140,7 +139,7 @@ try {
         } catch (Throwable $ignored) {
             // Ignore lookup failures, fallback to SKU
         }
-        
+
         $notificationPayload = [
             'product_name' => $productName,
             'customer_no' => $customerNo ?: ($transaction['customer_no'] ?? '-'),
@@ -151,18 +150,11 @@ try {
             'serial_number' => $serialNumber ?: ($transaction['serial_number'] ?? ''),
             'price' => (int)($transaction['sell_price'] ?? $transaction['price'] ?? 0)
         ];
-        
-        // Send notification to agent
+
         $notifier = new WhatsAppNotification();
-        $agentNotified = $notifier->notifyDigiflazzSuccess((int)$transaction['agent_id'], $notificationPayload);
-        
-        // Send notification to customer if customer phone is available
-        $customerPhone = $transaction['customer_no'] ?? '';
-        if (!empty($customerPhone)) {
-            $notifier->notifyCustomerDigiflazzSuccess($customerPhone, $notificationPayload);
-        }
-        
-        if ($agentNotified) {
+        $notified = $notifier->notifyDigiflazzSuccess((int)$transaction['agent_id'], $notificationPayload);
+
+        if ($notified) {
             $flagStmt = $db->prepare('UPDATE digiflazz_transactions SET whatsapp_notified = 1 WHERE id = :id');
             $flagStmt->execute([':id' => $transaction['id']]);
         }
