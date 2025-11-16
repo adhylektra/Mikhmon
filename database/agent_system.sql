@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS agents (
     status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
     level ENUM('bronze', 'silver', 'gold', 'platinum') DEFAULT 'bronze',
     commission_amount DECIMAL(15,2) DEFAULT 0.00,
+    commission_percent DECIMAL(5,2) DEFAULT 0.00,
     created_by VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -198,6 +199,30 @@ CREATE TABLE IF NOT EXISTS agent_settings (
     updated_by VARCHAR(50)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Table: payment_methods
+-- Metode pembayaran untuk transaksi
+CREATE TABLE IF NOT EXISTS payment_methods (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    gateway_name VARCHAR(50) NOT NULL,
+    method_code VARCHAR(50) NOT NULL,
+    method_name VARCHAR(100) NOT NULL,
+    method_type VARCHAR(20) NOT NULL,
+    name VARCHAR(100) NOT NULL DEFAULT '',
+    type VARCHAR(50) NOT NULL DEFAULT '',
+    display_name VARCHAR(100) NOT NULL DEFAULT '',
+    icon VARCHAR(100) DEFAULT NULL,
+    icon_url VARCHAR(255) DEFAULT NULL,
+    admin_fee_type ENUM('percentage','fixed','flat','percent') DEFAULT 'fixed',
+    admin_fee_value DECIMAL(10,2) DEFAULT 0.00,
+    min_amount DECIMAL(10,2) DEFAULT 0.00,
+    max_amount DECIMAL(12,2) DEFAULT 999999999.99,
+    is_active TINYINT(1) DEFAULT 1,
+    sort_order INT DEFAULT 0,
+    config TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Insert default settings
 INSERT INTO agent_settings (setting_key, setting_value, setting_type, description) VALUES
 ('min_topup_amount', '50000', 'number', 'Minimum amount untuk topup saldo'),
@@ -217,6 +242,14 @@ INSERT INTO agent_settings (setting_key, setting_value, setting_type, descriptio
 ('digiflazz_default_markup_percent', '5', 'number', 'Default markup percent for Digiflazz products'),
 ('digiflazz_last_sync', NULL, 'datetime', 'Last price list sync timestamp')
 ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value);
+
+-- Insert default payment methods
+INSERT INTO payment_methods (gateway_name, method_code, method_name, method_type, name, type, display_name, icon, admin_fee_type, admin_fee_value, min_amount, max_amount, is_active, sort_order) VALUES
+('tripay', 'QRIS', 'QRIS (Semua Bank & E-Wallet)', 'qris', 'QRIS', 'qris', 'QRIS (Semua Bank & E-Wallet)', 'fa-qrcode', 'percentage', 0.00, 10000.00, 5000000.00, 1, 1),
+('tripay', 'BRIVA', 'BRI Virtual Account', 'va', 'BRIVA', 'va', 'BRI Virtual Account', 'fa-bank', 'fixed', 4000.00, 10000.00, 5000000.00, 1, 2),
+('tripay', 'OVO', 'OVO', 'ewallet', 'OVO', 'ewallet', 'OVO', 'fa-mobile', 'percentage', 2.50, 10000.00, 2000000.00, 1, 7),
+('tripay', 'DANA', 'DANA', 'ewallet', 'DANA', 'ewallet', 'DANA', 'fa-mobile', 'percentage', 2.50, 10000.00, 2000000.00, 1, 8)
+ON DUPLICATE KEY UPDATE method_name=VALUES(method_name);
 
 -- ========================================
 -- VIEWS untuk reporting
@@ -360,22 +393,22 @@ FOR EACH ROW
 BEGIN
     -- Calculate commission if enabled
     DECLARE v_commission_enabled BOOLEAN;
-    DECLARE v_commission_amount DECIMAL(15,2);
+    DECLARE v_commission_percent DECIMAL(5,2);
     
     SELECT CAST(setting_value AS UNSIGNED) INTO v_commission_enabled
     FROM agent_settings WHERE setting_key = 'commission_enabled';
     
     IF v_commission_enabled THEN
-        SELECT commission_amount INTO v_commission_amount
+        SELECT commission_percent INTO v_commission_percent
         FROM agents WHERE id = NEW.agent_id;
         
-        IF v_commission_amount > 0 AND NEW.sell_price IS NOT NULL THEN
+        IF v_commission_percent > 0 AND NEW.sell_price IS NOT NULL THEN
             INSERT INTO agent_commissions (
                 agent_id, voucher_id, commission_amount,
-                voucher_price
+                commission_percent, voucher_price
             ) VALUES (
-                NEW.agent_id, NEW.id, v_commission_amount,
-                NEW.sell_price
+                NEW.agent_id, NEW.id, (NEW.sell_price * v_commission_percent / 100),
+                v_commission_percent, NEW.sell_price
             );
         END IF;
     END IF;
@@ -397,8 +430,8 @@ CREATE INDEX idx_agent_vouchers_profile ON agent_vouchers(profile_name, status);
 -- ========================================
 
 -- Insert sample agent (password: agent123)
-INSERT INTO agents (agent_code, agent_name, phone, email, password, balance, status, level, commission_amount, created_by) VALUES
-('AG001', 'Agent Demo', '081234567890', 'agent@demo.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 100000.00, 'active', 'silver', 5000.00, 'admin');
+INSERT INTO agents (agent_code, agent_name, phone, email, password, balance, status, level, commission_amount, commission_percent, created_by) VALUES
+('AG001', 'Agent Demo', '081234567890', 'agent@demo.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 100000.00, 'active', 'silver', 5000.00, 5.00, 'admin');
 
 -- ========================================
 -- END OF SQL SCRIPT
